@@ -63,7 +63,7 @@
 
   function renderHeader() {
     const bag = AF.cart().reduce((sum, item) => sum + item.qty, 0);
-    const nav = navLinks.map(([title, href]) => `<a href="${href}"${location.hash.split('?')[0] === href ? ' aria-current="page"' : ''}>${title}</a>`).join('');
+    const nav = navLinks.map(([title, href]) => `<a href="${esc(href)}"${location.hash.split('?')[0] === href ? ' aria-current="page"' : ''}>${esc(title)}</a>`).join('');
     header.innerHTML = `<div class="shell masthead"><nav class="desktop-navigation" aria-label="Shop navigation">${nav}</nav>
       <button class="icon-button mobile-menu" type="button" data-open="menu" aria-label="Open menu">${icon('menu')}</button>${wordmark()}
       <nav class="utilities" aria-label="Shopping tools"><button class="icon-button" type="button" data-open="search" aria-label="Search">${icon('search')}</button><a class="icon-button account-link" href="${AF.getSession() ? '#/account' : '#/login'}" aria-label="Account">${icon('user')}</a><a class="icon-button saved-link" href="#/saved" aria-label="Saved items">${icon('heart')}</a><button class="icon-button bag-button" type="button" data-open="bag" aria-label="Open shopping bag, ${bag} items">${icon('bag')}<span>${bag}</span></button></nav></div>`;
@@ -107,8 +107,8 @@
 
   function heroContent() {
     const s = slides[heroIndex];
-    return `<div class="hero-copy"><div class="hero-text"><div class="hero-kicker">${label(s.tag)}</div><h1>${s.first} <em>${s.second}</em></h1><p>${s.description}</p>
-      <div class="hero-actions"><a class="button primary" href="${s.href}">${s.action}</a><div class="hero-pickers" role="group" aria-label="Campaign slides">${slides.map((slide,i) => `<button type="button" data-slide="${i}" aria-label="Show ${esc(slide.tag)}" aria-pressed="${heroIndex === i}"><span></span></button>`).join('')}</div></div></div></div>
+    return `<div class="hero-copy"><div class="hero-text"><div class="hero-kicker">${label(s.tag)}</div><h1>${esc(s.first)} <em>${esc(s.second)}</em></h1><p>${esc(s.description)}</p>
+      <div class="hero-actions"><a class="button primary" href="${esc(s.href)}">${esc(s.action)}</a><div class="hero-pickers" role="group" aria-label="Campaign slides">${slides.map((slide,i) => `<button type="button" data-slide="${i}" aria-label="Show ${esc(slide.tag)}" aria-pressed="${heroIndex === i}"><span></span></button>`).join('')}</div></div></div></div>
       <div class="hero-photo${heroIndex ? ' hero-photo-night' : ''}">${img(s.image, s.alt, 'fetchpriority="high"')}${s.product ? `<a href="${productPath(s.product)}" class="photo-credit"><span>${icon('plus',15)}</span>${esc(s.credit)}</a>` : ''}</div>`;
   }
 
@@ -271,7 +271,7 @@
       content = bagPanel();
     } else if (kind === 'menu') {
       title = config.brand;
-      content = `<nav class="drawer-navigation" aria-label="Mobile navigation">${[...navLinks,['Saved items','#/saved'],['My account',AF.getSession() ? '#/account' : '#/login'],['Track an order','#/track']].map(([name,href])=>`<a href="${href}">${name}</a>`).join('')}</nav>`;
+      content = `<nav class="drawer-navigation" aria-label="Mobile navigation">${[...navLinks,['Saved items','#/saved'],['My account',AF.getSession() ? '#/account' : '#/login'],['Track an order','#/track']].map(([name,href])=>`<a href="${esc(href)}">${esc(name)}</a>`)}.join('')}</nav>`;
     } else if (kind === 'filters') {
       title = 'Filters';
       const options = [...new Set(available().flatMap(product=>product.sizes || []))];
