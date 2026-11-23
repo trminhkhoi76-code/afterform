@@ -1,0 +1,30 @@
+name: Frontend checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: |
+          node --check data.js
+          node --check store-loader.js
+          node --check runtime-config.js
+          node --check app.js
+          node --check admin.js
+          node --check checkout.js
+      - name: Regression tests
+        run: node --test tests/*.test.js

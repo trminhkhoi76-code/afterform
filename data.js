@@ -1,12 +1,12 @@
 (function () {
   'use strict';
 
-  const config = Object.freeze({
+  const config = {
     brand: 'AFTERFORM', locale: 'en-US', currency: 'USD', market: 'United States',
     hero: './assets/hero.webp', shippingFree: 150, shippingStandard: 9, shippingExpress: 18,
     categories: ['Outerwear', 'Tops', 'Bottoms', 'Accessories'],
     demoEmail: 'demo@afterform.test', demoPassword: 'Afterform123'
-  });
+  };
 
   const looks = [
     { id: 'the-long-way', name: 'The Long Way', line: 'Leather, rib cotton, and a line that keeps moving.', image: './assets/look-1.webp', alt: 'A woman in a leather bomber and wide-leg trousers against an amber backdrop', items: ['drift-bomber', 'frame-trouser', 'second-skin-tank'] },
@@ -48,7 +48,25 @@
   };
 
   const memory = new Map();
-  const keyFor = key => 'afterform-v1:' + key;
+  let storeId = 'afterform';
+  let remoteCatalog = null;
+  const source = {mode: 'dummy', storeId, reason: 'API not configured'};
+  const keyFor = key => storeId === 'afterform' ? 'afterform-v1:' + key : 'afterform-v2:' + storeId + ':' + key;
+  function setStore(id) {
+    storeId = id;
+    source.storeId = id;
+    config.storeId = id;
+  }
+  function setRemoteStore({store, products, remoteLooks, home}) {
+    Object.assign(config, store);
+    config.storeId = storeId;
+    config.slides = home.slides;
+    config.journal = home.journal;
+    remoteCatalog = products;
+    looks.splice(0, looks.length, ...remoteLooks);
+    source.mode = 'api';
+    source.reason = null;
+  }
   function read(key, fallback) {
     try {
       const value = localStorage.getItem(keyFor(key));
@@ -68,17 +86,26 @@
   function icon(name, size = 20) {
     return `<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round">${paths[name] ?? paths.box}</svg>`;
   }
-  const formatCurrency = new Intl.NumberFormat(config.locale, {style: 'currency', currency: config.currency, minimumFractionDigits: 2});
-  const money = value => formatCurrency.format(Number(value) || 0);
+  let formatterKey = '';
+  let formatter;
+  function money(value) {
+    const key = config.locale + ':' + config.currency;
+    if (key !== formatterKey) {
+      formatter = new Intl.NumberFormat(config.locale, {style: 'currency', currency: config.currency});
+      formatterKey = key;
+    }
+    return formatter.format(Number(value) || 0);
+  }
   const cents = value => Math.round((value + Number.EPSILON) * 100) / 100;
-  const catalog = () => read('catalog', starterCatalog);
-  const setCatalog = items => write('catalog', items);
+  const catalog = () => remoteCatalog === null ? read('catalog', starterCatalog) : remoteCatalog;
+  // TODO(afterform-be): remote catalog edits are an in-memory preview until authenticated write APIs exist.
+  const setCatalog = items => remoteCatalog === null ? write('catalog', items) : (remoteCatalog = items);
   const cart = () => read('cart', []);
   const setCart = lines => write('cart', lines);
   function getOrders() {
     const existing = read('orders', null);
     if (existing) return existing;
-    return write('orders', window.AFSeed ? window.AFSeed(starterCatalog) : []);
+    return write('orders', source.mode === 'api' ? [] : window.AFSeed ? window.AFSeed(starterCatalog) : []);
   }
   const setOrders = value => write('orders', value);
 
@@ -121,7 +148,9 @@
     const shipping = items.length === 0 ? 0 : method === 'express' ? config.shippingExpress : subtotal >= config.shippingFree ? 0 : config.shippingStandard;
     return {subtotal, discount, shipping, total: cents(subtotal - discount + shipping)};
   }
+  const backendCheckoutPending = () => source.mode === 'api' || Boolean(String(window.AF_RUNTIME?.apiBaseUrl || '').trim());
   function placeOrder({contact, address, method, code}) {
+    if (backendCheckoutPending()) return {ok:false, error:'Checkout is not enabled for API-backed stores until a secure backend order endpoint is available.'};
     const lines = cart();
     const products = catalog();
     const items = cartItems(lines, products);
@@ -154,6 +183,7 @@
     return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
   }
   async function signIn(email, password) {
+    if (backendCheckoutPending()) return {ok:false, error:'Accounts are not enabled for API-backed stores yet.'};
     const normalized = email.trim().toLowerCase();
     const isDemo = normalized === config.demoEmail && password === config.demoPassword;
     const profile = read('profiles', []).find(item => item.email === normalized);
@@ -164,6 +194,7 @@
     return {ok: true, session};
   }
   async function register({name, email, password}) {
+    if (source.mode === 'api') return {ok:false, error:'Accounts are not enabled for API-backed stores yet.'};
     const normalized = email.trim().toLowerCase();
     const profiles = read('profiles', []);
     if (normalized === config.demoEmail || profiles.some(item => item.email === normalized)) return {ok: false, error: 'An account with this email already exists.'};
@@ -175,5 +206,5 @@
     return {ok: true, session};
   }
 
-  window.AF = {config, looks, read, write, esc, icon, money, catalog, setCatalog, cart, setCart, addCart, updateCart, cartItems, coupon, totals, getOrders, setOrders, placeOrder, getSession, signIn, register, signOut};
+  window.AF = {config, looks, source, setStore, setRemoteStore, read, write, esc, icon, money, catalog, setCatalog, cart, setCart, addCart, updateCart, cartItems, coupon, totals, getOrders, setOrders, placeOrder, getSession, signIn, register, signOut};
 }());

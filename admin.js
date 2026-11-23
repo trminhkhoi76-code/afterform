@@ -1,5 +1,6 @@
-(() => {
+(async () => {
   "use strict";
+  await window.AF.ready;
 
   const main = document.querySelector(".admin-main");
   const nav = document.querySelector(".rail-nav");
@@ -60,7 +61,7 @@
   const standardDate = new Intl.DateTimeFormat("en-US", {month:"short", day:"numeric", year:"numeric"});
   const shortDate = new Intl.DateTimeFormat("en-US", {month:"short", day:"numeric"});
   const wholeNumber = new Intl.NumberFormat("en-US", {maximumFractionDigits:0});
-  const wholeMoney = new Intl.NumberFormat("en-US", {style:"currency", currency:"USD", maximumFractionDigits:0});
+  const wholeMoney = {format:value => new Intl.NumberFormat(AF.config.locale, {style:"currency", currency:AF.config.currency, maximumFractionDigits:0}).format(value)};
   const toNum = value => Number(value) || 0;
   const str = value => String(value ?? "");
   const lower = value => str(value).toLocaleLowerCase();
@@ -501,7 +502,7 @@
     });
     const pageName = pages[state.route].name;
     document.querySelector("#admin-crumb").textContent = pageName;
-    document.title = `${pageName} · AFTERFORM Store desk`;
+    document.title = `${pageName} · ${AF.config.brand} Store desk`;
     const orders = allOrders();
     const catalog = AF.catalog();
     const candidates = {
@@ -564,6 +565,16 @@
     toastTimeout = setTimeout(() => toast.classList.remove("visible"), 3600);
   }
 
+  const statusText = document.querySelector('.workspace-state span:last-child');
+  if (statusText) statusText.textContent = AF.source.mode === 'api'
+    ? 'API catalog · admin read-only'
+    : (AF.source.storeId !== 'afterform' || window.AF_RUNTIME?.apiBaseUrl) ? 'Demo fallback · backend unavailable' : 'Demo workspace';
+  const brandText = document.querySelector('.rail-brand-name');
+  if (brandText?.firstChild) brandText.firstChild.textContent = AF.config.brand;
+  const storeLinks = document.querySelectorAll('.store-link, .top-store');
+  storeLinks.forEach(link => { link.href = 'index.html?store=' + encodeURIComponent(AF.source.storeId); });
+  const footer = document.querySelector('.admin-footer');
+  if (footer) footer.innerHTML = AF.esc(AF.config.brand) + ' Store desk <span>' + AF.esc(AF.config.currency) + '</span>';
   nav.innerHTML = Object.entries(groups).map(([label, keys]) => `<div class="nav-group"><p class="nav-name">${label}</p>${keys.map(key => `<a class="nav-link" href="#${key}"><span aria-hidden="true">${icon(pages[key].icon)}</span>${pages[key].name}</a>`).join("")}</div>`).join("");
   document.querySelectorAll("[data-icon]").forEach(node => {node.innerHTML = icon(node.dataset.icon);});
   railToggle.addEventListener("click", () => {
@@ -597,6 +608,10 @@
     const button = event.target.closest("[data-admin-action]");
     if (!button) return;
     const {id, adminAction} = button.dataset;
+    if (AF.source.mode === 'api' && ['order','product','create-product','stock','discount','create-discount'].includes(adminAction)) {
+      showToast('Read-only API preview. Admin write endpoints are TODO in afterform-be.');
+      return;
+    }
     dialogOrigin = {id, adminAction};
     const actions = {
       order:() => editOrder(id), product:() => editProduct(id), "create-product":() => editProduct(), stock:() => editStock(id), customer:() => viewCustomer(id),
