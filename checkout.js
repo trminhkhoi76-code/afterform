@@ -120,7 +120,7 @@
   }
 
   function checkout() {
-    if (AF.source.mode === 'api') return empty('Checkout is coming soon.', 'This API-backed catalog is read-only until secure order, inventory and payment endpoints are implemented in afterform-be.', 'lock');
+    if (AF.source.mode === 'api' || window.AF_RUNTIME?.apiBaseUrl) return empty('Checkout is coming soon.', 'This API-backed catalog is read-only until secure order, inventory and payment endpoints are implemented in afterform-be.', 'lock');
     const items = AF.cartItems();
     if (!items.length) return empty("Your bag is empty.", "Add an item to your bag to start checkout.");
     const session = AF.getSession();
@@ -215,7 +215,7 @@
   }
 
   function auth(route) {
-    if (AF.source.mode === 'api') return empty('Customer accounts are coming soon.', 'Authentication for API-backed stores will be implemented in afterform-be.', 'user');
+    if (AF.source.mode === 'api' || window.AF_RUNTIME?.apiBaseUrl) return empty('Customer accounts are coming soon.', 'Authentication for API-backed stores will be implemented in afterform-be.', 'user');
     const isRegister = route.page === "register";
     const returnTo = authReturn(route);
     const switchHref = `#/${isRegister ? "login" : "register"}${returnTo === "/checkout" ? "?return=checkout" : ""}`;
@@ -291,7 +291,7 @@
   }
 
   function track() {
-    if (AF.source.mode === 'api') return empty('Order tracking is coming soon.', 'Backend order tracking is not connected yet.', 'box');
+    if (AF.source.mode === 'api' || window.AF_RUNTIME?.apiBaseUrl) return empty('Order tracking is coming soon.', 'Backend order tracking is not connected yet.', 'box');
     return `<div class="flow-page">
       ${heading("Track your order.", "Enter your order number and the email used at checkout.")}
       <div class="flow-track-layout">
