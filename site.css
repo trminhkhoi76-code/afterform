@@ -179,9 +179,12 @@ s { color: var(--muted); }
 .thumb { padding: 2px; border: 1px solid var(--line); border-radius: var(--corner); background: transparent; height: 77px; overflow: hidden; }
 .thumb[aria-pressed=true] { border-color: var(--ink); }
 .thumb img { height: 100%; object-fit: cover; }
+.thumb { position: relative; }
+.thumb span { position: absolute; right: 4px; bottom: 4px; padding: 1px 5px; background: #171714; color: #fff; border-radius: 3px; }
 .detail-thumb img, .detail-frame img { transform: scale(1.48); }
 .product-frame { position: relative; width: 100%; aspect-ratio: 0.81; overflow: hidden; background: #d2cfc8; display: grid; place-items: center; border-radius: var(--corner); }
 .product-frame img { height: 100%; object-fit: cover; }
+.product-frame video, .zoom-image video { width: 100%; height: 100%; object-fit: contain; background: #171714; }
 .product-frame.styled-frame img { object-fit: cover; object-position: center 38%; }
 .zoom-button { position: absolute; bottom: 12px; right: 12px; background: var(--paper); }
 .zoom-button:hover { background: var(--lime); }

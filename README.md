@@ -60,7 +60,7 @@ The storefront and admin now wait for one **public backend bootstrap** before re
 
 The production storefront at `https://afterform-lovat.vercel.app/` now uses the published Catalog bootstrap endpoint. `runtime-config.js` sets `apiBaseUrl` to the current origin only on this production domain. `vercel.json` rewrites `/api/v1/public/:path*` to `https://afterform-be.vercel.app/api/v1/public/:path*`, keeping the browser on the same origin, so no backend CORS changes or browser credentials are needed. The rewrite exposes **only public Catalog API routes**, not admin, orders or payment endpoints.
 
-The existing Neon `production` Catalog store `afterform` has the original fashion demo data imported as a published snapshot (version 1): 8 products, 3 looks, 4 categories. Existing checkout/admin mutations remain disabled in API mode. Local and preview site URLs keep the demo fallback. Backend edits to the published snapshot can update the site without frontend code changes.
+The Neon `production` Catalog store `afterform` serves 8 products, 3 looks and 4 categories. Catalog photos are served from Neon Object Storage. Product gallery entries can also include an HTTPS `video` URL (MP4 or WebM) and an optional `image` poster. Existing checkout and admin mutations remain disabled in API mode. Local and preview site URLs keep the demo fallback. See [catalog operations](https://github.com/trminhkhoi76-code/afterform-be/blob/main/docs/catalog-operations.md) for the import and agent workflow.
 
 ### Loading and fallback behavior
 
