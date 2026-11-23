@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/v1/public/:path*",
+      "destination": "https://afterform-be.vercel.app/api/v1/public/:path*"
+    }
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "**": false
+    }
+  }
+}
