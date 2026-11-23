@@ -14,6 +14,16 @@
   const validColor = value => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
   const unique = values => [...new Set(values)];
 
+  function videoUrl(value) {
+    if (typeof value !== 'string' || !value) return '';
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' && !url.username && !url.password ? url.href : '';
+    } catch {
+      return '';
+    }
+  }
+
   function normalizeProduct(product, store) {
     if (!product || typeof product !== 'object' || !String(product.id || '').trim() ||
         !String(product.name || '').trim() || !Number.isFinite(Number(product.price)) || Number(product.price) < 0) {
@@ -30,7 +40,13 @@
       ? Object.fromEntries(variants.map(variant => [String(variant.options?.[optionKey] ?? variant.name ?? 'One size'), Math.max(0, Number(variant.stock) || 0)]))
       : Object.fromEntries(sizes.map(size => [size, Math.max(0, Number(product.stock?.[size]) || 0)]));
     const image = string(product.image);
-    const gallery = list(product.gallery).filter(entry => entry && typeof entry.image === 'string');
+    const gallery = list(product.gallery).flatMap(entry => {
+      if (!entry || typeof entry !== 'object') return [];
+      const video = videoUrl(entry.video);
+      if (video) return [{...entry, video, image: string(entry.image), alt: string(entry.alt, product.name)}];
+      if (typeof entry.image !== 'string') return [];
+      return [{...entry, video: '', alt: string(entry.alt, product.name)}];
+    });
     if (!gallery.length && image) gallery.push({image, alt: string(product.alt, product.name)});
     return {
       ...product,

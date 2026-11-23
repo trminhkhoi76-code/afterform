@@ -85,6 +85,12 @@
     return `<img src="${esc(path)}" alt="${esc(alt)}" ${extra}>`;
   }
 
+  function galleryMedia(frame, extra = '') {
+    if (!frame.video) return img(frame.image, frame.alt, extra);
+    const poster = frame.image ? ` poster="${esc(frame.image)}"` : '';
+    return `<video controls playsinline preload="metadata" src="${esc(frame.video)}"${poster} aria-label="${esc(frame.alt)}"></video>`;
+  }
+
   function swatch(color) {
     const hex = /^#[0-9a-f]{3,8}$/i.test(color?.hex || '') ? color.hex : '#aaa99f';
     return `<i class="swatch" style="--swatch:${hex}" aria-hidden="true"></i>`;
@@ -192,8 +198,8 @@
     const soldOut = !Object.values(product.stock || {}).some(quantity => quantity > 0);
     const related = available().filter(item => item.id !== product.id).sort((a,b)=>Number(b.category === product.category)-Number(a.category === product.category)).slice(0,4);
     return `<section class="shell product-page">${breadcrumbs(['Shop','#/shop'],[product.category,categoryPath(product.category)],[product.name])}
-      <div class="product-layout"><div class="product-gallery"><div class="thumbnail-list" aria-label="Product images">${gallery.map((image,i) => `<button type="button" class="thumb ${image.detail ? 'detail-thumb' : ''}" data-image="${i}" aria-label="Show image ${i+1}: ${esc(image.alt)}" aria-pressed="${selection.image === i}">${img(image.image,'')}</button>`).join('')}</div>
-      <div class="product-frame ${frame.detail ? 'detail-frame' : ''} ${selection.image !== 0 && !frame.detail ? 'styled-frame' : ''}">${img(frame.image,frame.alt,'fetchpriority="high"')}<button class="icon-button zoom-button" data-open="zoom" type="button" aria-label="Enlarge image">${icon('expand',20)}</button></div></div>
+      <div class="product-layout"><div class="thumbnail-list" aria-label="Product media">${gallery.map((item,i) => `<button type="button" class="thumb ${item.detail ? 'detail-thumb' : ''}" data-image="${i}" aria-label="Show ${item.video ? 'video' : 'image'} ${i+1}: ${esc(item.alt)}" aria-pressed="${selection.image === i}">${img(item.image || product.image,'')}${item.video ? '<span aria-hidden="true">▶</span>' : ''}</button>`).join('')}</div>
+      <div class="product-frame ${frame.detail ? 'detail-frame' : ''} ${selection.image !== 0 && !frame.detail ? 'styled-frame' : ''}">${galleryMedia(frame,'fetchpriority="high"')}${frame.video ? '' : `<button class="icon-button zoom-button" data-open="zoom" type="button" aria-label="Enlarge image">${icon('expand',20)}</button>`}</div></div>
       <div class="product-info">${label(product.category + (product.isNew ? ' / New in' : ''))}<div class="product-title"><h1>${esc(product.name)}<em>.</em></h1>${saveButton(product,'product-save')}</div><p class="product-price">${product.oldPrice > product.price ? `<s>${money(product.oldPrice)}</s>` : ''}${money(product.price)}</p><p class="product-description">${esc(product.description)}</p>
       ${product.colors?.length ? `<div class="variant-heading">Color <span>${esc(selection.color)}</span></div><div class="color-options" role="group" aria-label="Color">${product.colors.map(color => `<button type="button" data-color="${esc(color.name)}" aria-label="${esc(color.name)}" aria-pressed="${selection.color === color.name}">${swatch(color)}</button>`).join('')}</div>` : ''}
       <div class="variant-heading size-heading">${esc(product.optionLabel || 'Size')}${AF.source.mode === 'dummy' && product.sizes?.some(size => size !== 'One size') ? ' <button class="text-link" data-open="size-guide" type="button">Size guide</button>' : ''}</div>${sizing(product,selection.size)}
@@ -291,7 +297,7 @@
       const gallery = selectedGallery(product);
       const frame = gallery[selection.image];
       title = product.name;
-      content = `<div class="zoom-image ${frame.detail ? 'detail-frame' : ''}">${img(frame.image,frame.alt)}</div><div class="zoom-controls"><button class="icon-button" type="button" data-zoom-step="-1" aria-label="Previous image">${icon('left')}</button><span>${selection.image + 1} / ${gallery.length}</span><button class="icon-button" type="button" data-zoom-step="1" aria-label="Next image">${icon('right')}</button></div>`;
+      content = `<div class="zoom-image ${frame.detail ? 'detail-frame' : ''}">${galleryMedia(frame)}</div><div class="zoom-controls"><button class="icon-button" type="button" data-zoom-step="-1" aria-label="Previous media">${icon('left')}</button><span>${selection.image + 1} / ${gallery.length}</span><button class="icon-button" type="button" data-zoom-step="1" aria-label="Next media">${icon('right')}</button></div>`;
     } else if (kind === 'size-guide') {
       title = 'Size guide';
       content = `<div class="size-guide"><p>Measure around the fullest part of your chest and your natural waist. See Details &amp; care for guidance on how each piece fits.</p><table><caption>Body measurements in inches</caption><thead><tr><th>Size</th><th>Chest</th><th>Waist</th></tr></thead><tbody>${[['XS','32–34','25–27'],['S','34–36','27–29'],['M','36–39','29–32'],['L','39–42','32–35'],['XL','42–45','35–38']].map(row=>`<tr>${row.map(value=>`<td>${value}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;

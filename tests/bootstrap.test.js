@@ -37,7 +37,7 @@ async function boot({search = '', apiBaseUrl = '', response, fetchError} = {}) {
     return response || {ok: false, status: 503};
   };
   const context = vm.createContext({
-    window, document, localStorage, fetch, URLSearchParams, Intl, AbortController,
+    window, document, localStorage, fetch, URL, URLSearchParams, Intl, AbortController,
     setTimeout, clearTimeout, console: {warn() {}}
   });
   vm.runInContext(read('data.js'), context, {filename: 'data.js'});
@@ -96,6 +96,26 @@ test('valid empty catalog stays empty instead of silently showing fashion produc
   });
   assert.equal(window.AF.source.mode, 'api');
   assert.equal(window.AF.catalog().length, 0);
+});
+
+test('catalog gallery supports HTTPS videos with optional posters and preserves still images', async () => {
+  const payload = structuredClone(beautyResponse);
+  payload.products[0].gallery = [
+    {image: 'https://example.com/still.webp', alt: 'Still'},
+    {video: 'https://example.com/clip.mp4', alt: 'Clip'},
+    {video: 'https://example.com/studio.webm', image: 'https://example.com/preview.webp'},
+    {video: 'javascript:alert(1)'}
+  ];
+  const {window} = await boot({
+    search: '?store=beauty', apiBaseUrl: 'https://example.com',
+    response: {ok: true, json: async () => payload}
+  });
+  const gallery = window.AF.catalog()[0].gallery;
+  assert.equal(gallery.length, 3);
+  assert.equal(gallery[0].image, 'https://example.com/still.webp');
+  assert.equal(gallery[1].video, 'https://example.com/clip.mp4');
+  assert.equal(gallery[1].image, '');
+  assert.equal(gallery[2].image, 'https://example.com/preview.webp');
 });
 
 test('wrong store identity rejects the entire response', async () => {
