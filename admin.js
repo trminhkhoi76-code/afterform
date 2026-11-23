@@ -568,7 +568,7 @@
   const statusText = document.querySelector('.workspace-state span:last-child');
   if (statusText) statusText.textContent = AF.source.mode === 'api'
     ? 'API catalog · admin read-only'
-    : AF.source.storeId !== 'afterform' ? 'Demo fallback · ' + AF.source.storeId : 'Demo workspace';
+    : (AF.source.storeId !== 'afterform' || window.AF_RUNTIME?.apiBaseUrl) ? 'Demo fallback · backend unavailable' : 'Demo workspace';
   const brandText = document.querySelector('.rail-brand-name');
   if (brandText?.firstChild) brandText.firstChild.textContent = AF.config.brand;
   const storeLinks = document.querySelectorAll('.store-link, .top-store');
