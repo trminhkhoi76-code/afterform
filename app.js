@@ -199,7 +199,7 @@
       <div class="variant-heading size-heading">${esc(product.optionLabel || 'Size')}${AF.source.mode === 'dummy' && product.sizes?.some(size => size !== 'One size') ? ' <button class="text-link" data-open="size-guide" type="button">Size guide</button>' : ''}</div>${sizing(product,selection.size)}
       <p class="stock-message" aria-live="polite">${soldOut ? 'Sold out' : selection.size && stock < 5 ? `Only ${stock} left in this size` : selection.size ? 'In stock' : 'Select a size to check availability'}</p>
       <button type="button" class="button primary add-main" data-add="product" ${soldOut ? 'disabled' : ''}>${soldOut ? 'Sold out' : 'Add to bag'} ${soldOut ? '' : '· ' + money(product.price)}</button>
-      ${AF.source.mode === 'dummy' ? `<div class="shipping-note">${icon('truck',20)} Complimentary US shipping on orders $150+</div>` : ''}
+      ${AF.source.mode === 'dummy' && !window.AF_RUNTIME?.apiBaseUrl ? `<div class="shipping-note">${icon('truck',20)} Complimentary US shipping on orders $150+</div>` : ''}
       <div class="product-accordions"><details><summary>Details & care</summary><ul>${(product.details || []).map(detail => `<li>${esc(detail)}</li>`).join('')}</ul></details><details><summary>Delivery & returns</summary><p>Standard delivery in 3–5 business days. Returns accepted within 30 days. <a class="text-link" href="#/info/shipping">See delivery details</a></p></details></div></div></div>
       ${related.length ? `<div class="related"><div class="section-heading"><h2>${AF.source.mode === 'api' ? 'You may also <em>like.</em>' : 'Wear it <em>with.</em>'}</h2><a class="text-link" href="#/shop">Explore the collection</a></div>${grid(related)}</div>` : ''}</section>`;
   }
@@ -241,8 +241,8 @@
     } else main.innerHTML = missing();
     const heading = main.querySelector('h1');
     document.title = AF.source.mode === 'api'
-      ? `${current.page === 'home' ? 'Shop' : heading?.textContent?.replace(/\\.$/, '') || 'Shop'} — ${config.brand}`
-      : current.page === 'home' ? 'AFTERFORM — Clothes for wherever you’re headed' : `${heading?.textContent?.replace(/\\.$/, '') || 'Shop'} — AFTERFORM`;
+      ? `${current.page === 'home' ? 'Shop' : heading?.textContent?.replace(/[.]$/, '') || 'Shop'} — ${config.brand}`
+      : current.page === 'home' ? 'AFTERFORM — Clothes for wherever you’re headed' : `${heading?.textContent?.replace(/[.]$/, '') || 'Shop'} — AFTERFORM`;
     if (resetScroll && (previous?.page !== current.page || previous?.parts.join('/') !== current.parts.join('/'))) window.scrollTo(0,0);
     if (focus) main.focus({preventScroll:true});
   }
@@ -252,7 +252,7 @@
     const total = AF.totals(items);
     if (!items.length) return `<div class="bag-empty">${icon('bag',42)}<h3>Your bag is empty.</h3><a class="button primary" href="#/shop">Explore the shop</a></div>`;
     const remaining = Math.max(0,config.shippingFree - total.subtotal);
-    return `<div class="bag-drawer-content">${AF.source.mode === 'dummy' ? `<div class="shipping-progress"><p>${remaining ? `${money(remaining)} away from complimentary US shipping` : 'You’ve unlocked complimentary standard US shipping.'}</p><progress aria-label="Progress toward complimentary shipping" value="${Math.min(config.shippingFree,total.subtotal)}" max="${config.shippingFree}"></progress></div>` : ''}<div class="bag-drawer-items">${items.map(item => `<article class="drawer-item"><a href="${productPath(item.id)}">${img(item.image,item.name)}</a><div><a href="${productPath(item.id)}">${esc(item.name)}</a><span>${esc(item.color)}${item.size ? ' / ' + esc(item.size) : ''}</span><div class="quantity"><button type="button" data-bag-change="-1" data-id="${esc(item.id)}" data-size-value="${esc(item.size)}" data-color-value="${esc(item.color)}" aria-label="Decrease ${esc(item.name)} quantity">${icon('minus',14)}</button><span>${item.qty}</span><button type="button" data-bag-change="1" data-id="${esc(item.id)}" data-size-value="${esc(item.size)}" data-color-value="${esc(item.color)}" aria-label="Increase ${esc(item.name)} quantity" ${item.qty >= item.stock ? 'disabled' : ''}>${icon('plus',14)}</button></div></div><b>${money(item.price * item.qty)}</b></article>`).join('')}</div><div class="bag-drawer-end"><div><b>Subtotal</b><b>${money(total.subtotal)}</b></div><p>Delivery shown at checkout.</p><a class="button primary" href="#/checkout">Checkout</a><a class="button secondary" href="#/bag">View bag</a></div></div>`;
+    return `<div class="bag-drawer-content">${AF.source.mode === 'dummy' && !window.AF_RUNTIME?.apiBaseUrl ? `<div class="shipping-progress"><p>${remaining ? `${money(remaining)} away from complimentary US shipping` : 'You’ve unlocked complimentary standard US shipping.'}</p><progress aria-label="Progress toward complimentary shipping" value="${Math.min(config.shippingFree,total.subtotal)}" max="${config.shippingFree}"></progress></div>` : ''}<div class="bag-drawer-items">${items.map(item => `<article class="drawer-item"><a href="${productPath(item.id)}">${img(item.image,item.name)}</a><div><a href="${productPath(item.id)}">${esc(item.name)}</a><span>${esc(item.color)}${item.size ? ' / ' + esc(item.size) : ''}</span><div class="quantity"><button type="button" data-bag-change="-1" data-id="${esc(item.id)}" data-size-value="${esc(item.size)}" data-color-value="${esc(item.color)}" aria-label="Decrease ${esc(item.name)} quantity">${icon('minus',14)}</button><span>${item.qty}</span><button type="button" data-bag-change="1" data-id="${esc(item.id)}" data-size-value="${esc(item.size)}" data-color-value="${esc(item.color)}" aria-label="Increase ${esc(item.name)} quantity" ${item.qty >= item.stock ? 'disabled' : ''}>${icon('plus',14)}</button></div></div><b>${money(item.price * item.qty)}</b></article>`).join('')}</div><div class="bag-drawer-end"><div><b>Subtotal</b><b>${money(total.subtotal)}</b></div><p>Delivery shown at checkout.</p><a class="button primary" href="#/checkout">Checkout</a><a class="button secondary" href="#/bag">View bag</a></div></div>`;
   }
 
   let quick = null;
@@ -466,9 +466,9 @@
     if (announcement) announcement.textContent = config.description || config.brand;
     const market = document.querySelector('.announcement .market');
     if (market) market.textContent = [config.market, config.currency].filter(Boolean).join(' · ');
-  } else if (AF.source.storeId !== 'afterform') {
+  } else if (AF.source.storeId !== 'afterform' || window.AF_RUNTIME?.apiBaseUrl) {
     const announcement = document.querySelector('.announcement p');
-    if (announcement) announcement.textContent = 'Demo fallback — ' + AF.source.storeId + ' is unavailable';
+    if (announcement) announcement.textContent = 'Demo fallback — backend catalog unavailable; live checkout disabled';
   }
   renderFooter();
   refresh();
