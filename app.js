@@ -109,11 +109,12 @@
     const s = slides[heroIndex];
     return `<div class="hero-copy"><div class="hero-text"><div class="hero-kicker">${label(s.tag)}</div><h1>${s.first} <em>${s.second}</em></h1><p>${s.description}</p>
       <div class="hero-actions"><a class="button primary" href="${s.href}">${s.action}</a><div class="hero-pickers" role="group" aria-label="Campaign slides">${slides.map((slide,i) => `<button type="button" data-slide="${i}" aria-label="Show ${esc(slide.tag)}" aria-pressed="${heroIndex === i}"><span></span></button>`).join('')}</div></div></div></div>
-      <div class="hero-photo${heroIndex ? ' hero-photo-night' : ''}">${img(s.image, s.alt, 'fetchpriority="high"')}<a href="${productPath(s.product)}" class="photo-credit"><span>${icon('plus',15)}</span>${s.credit}</a></div>`;
+      <div class="hero-photo${heroIndex ? ' hero-photo-night' : ''}">${img(s.image, s.alt, 'fetchpriority="high"')}${s.product ? `<a href="${productPath(s.product)}" class="photo-credit"><span>${icon('plus',15)}</span>${esc(s.credit)}</a>` : ''}</div>`;
   }
 
   function home() {
-    const items = available().filter(product => product.featured).slice(0,4);
+    const featured = available().filter(product => product.featured);
+    const items = (featured.length ? featured : available()).slice(0,4);
     if (AF.source.mode === 'api') {
       return `<section class="shell hero" id="hero" aria-label="Featured collection">${heroContent()}</section>
         <nav class="shell collection-strip" aria-label="Shop by category"><div class="collection-strip-inner"><span>Shop by category</span>${config.categories.map(category => `<a href="${categoryPath(category)}">${esc(category)}</a>`).join('')}</div></nav>
@@ -153,17 +154,19 @@
     const sort = route.query.get('sort') || 'featured';
     const title = query ? 'Search' : onlySaved ? 'Saved pieces' : category || (isNew ? 'New arrivals' : 'Shop all');
     const categoryDescription = ({Outerwear:'Structure, softness, and room to layer.',Tops:'Layers to start with, and some to finish with.',Bottoms:'A longer line and space to move.',Accessories:'Small pieces that change the whole silhouette.'})[category];
-    const description = onlySaved ? 'Keep the pieces you’re thinking about close.' : query ? `Results for “${query}”` : isNew ? 'The latest pieces from the Motion Edit.' : categoryDescription || 'Clothes and accessories for wherever you’re headed.';
+    const description = AF.source.mode === 'api'
+      ? (query ? `Results for “${query}”` : config.description || 'Explore our catalog.')
+      : onlySaved ? 'Keep the pieces you’re thinking about close.' : query ? `Results for “${query}”` : isNew ? 'The latest pieces from the Motion Edit.' : categoryDescription || 'Clothes and accessories for wherever you’re headed.';
     const needle = query.toLowerCase().trim();
     let items = available().filter(item => (!onlySaved || saved().includes(item.id)) && (!category || slug(item.category) === slug(category)) && (!isNew || item.isNew));
     if (needle) items = items.filter(item => [item.name,item.category,item.description,...(item.colors || []).map(color => color.name)].some(value => String(value ?? '').toLowerCase().includes(needle)));
     if (size) items = items.filter(item => Number(item.stock?.[size]) > 0);
-    if (price) items = items.filter(item => price === 'over-100' ? item.price >= 100 : item.price < Number(price));
+    if (price) items = items.filter(item => price.startsWith('over-') ? item.price >= Number(price.slice(5)) : item.price < Number(price));
     if (stockOnly) items = items.filter(item => Object.values(item.stock || {}).some(count => count > 0));
     if (sort === 'low' || sort === 'high') items.sort((a,b) => (a.price - b.price) * (sort === 'low' ? 1 : -1));
     if (sort === 'newest') items.sort((a,b) => Number(Boolean(b.isNew)) - Number(Boolean(a.isNew)));
     const sortOptions = [['featured','Featured'],['newest','Newest'],['low','Price: low to high'],['high','Price: high to low']];
-    const tags = [['size',size],['price',price === 'over-100' ? '$100 and up' : price ? `Under $${price}` : ''],['stock',stockOnly ? 'In stock' : '']].filter(([,value]) => value);
+    const tags = [['size',size],['price',price?.startsWith('over-') ? money(Number(price.slice(5))) + ' and up' : price ? 'Under ' + money(Number(price)) : ''],['stock',stockOnly ? 'In stock' : '']].filter(([,value]) => value);
     return `<section class="shell listing">${breadcrumbs([title])}<div class="page-heading"><h1>${esc(title)}<em>.</em></h1><p>${esc(description)}</p></div>
       ${onlySaved || query ? '' : `<nav class="category-tabs" aria-label="Product categories"><a href="#/shop" ${route.page === 'shop' ? 'aria-current="page"' : ''}>All pieces</a><a href="#/collection/new" ${isNew ? 'aria-current="page"' : ''}>New arrivals</a>${categories.map(entry => `<a href="${categoryPath(entry)}" ${entry === category ? 'aria-current="page"' : ''}>${esc(entry)}</a>`).join('')}</nav>`}
       <div class="listing-tools"><span aria-live="polite">${items.length} ${items.length === 1 ? 'piece' : 'pieces'}</span><div><button type="button" class="outline-control" data-open="filters">${icon('filter',17)} Filters${tags.length ? ' (' + tags.length + ')' : ''}</button><label class="sr-only" for="sort">Sort products</label><select id="sort" class="outline-control">${sortOptions.map(([value,text]) => `<option value="${value}" ${value === sort ? 'selected' : ''}>${esc(text)}</option>`).join('')}</select></div></div>
@@ -176,7 +179,7 @@
   }
 
   function sizing(product, chosen = '') {
-    return `<div class="size-options" role="group" aria-label="Size">${(product.sizes || []).map(size => `<button type="button" class="size-choice" data-size="${esc(size)}" aria-pressed="${chosen === size}" ${product.stock?.[size] > 0 ? '' : 'disabled'}>${esc(size)}</button>`).join('')}</div>`;
+    return `<div class="size-options" role="group" aria-label="${esc(product.optionLabel || 'Size')}">${(product.sizes || []).map(size => `<button type="button" class="size-choice" data-size="${esc(size)}" aria-pressed="${chosen === size}" ${product.stock?.[size] > 0 ? '' : 'disabled'}>${esc(size)}</button>`).join('')}</div>`;
   }
 
   function productPage(route) {
@@ -193,12 +196,12 @@
       <div class="product-frame ${frame.detail ? 'detail-frame' : ''} ${selection.image !== 0 && !frame.detail ? 'styled-frame' : ''}">${img(frame.image,frame.alt,'fetchpriority="high"')}<button class="icon-button zoom-button" data-open="zoom" type="button" aria-label="Enlarge image">${icon('expand',20)}</button></div></div>
       <div class="product-info">${label(product.category + (product.isNew ? ' / New in' : ''))}<div class="product-title"><h1>${esc(product.name)}<em>.</em></h1>${saveButton(product,'product-save')}</div><p class="product-price">${product.oldPrice > product.price ? `<s>${money(product.oldPrice)}</s>` : ''}${money(product.price)}</p><p class="product-description">${esc(product.description)}</p>
       ${product.colors?.length ? `<div class="variant-heading">Color <span>${esc(selection.color)}</span></div><div class="color-options" role="group" aria-label="Color">${product.colors.map(color => `<button type="button" data-color="${esc(color.name)}" aria-label="${esc(color.name)}" aria-pressed="${selection.color === color.name}">${swatch(color)}</button>`).join('')}</div>` : ''}
-      <div class="variant-heading size-heading">Size${product.sizes?.some(size => size !== 'One size') ? ' <button class="text-link" data-open="size-guide" type="button">Size guide</button>' : ''}</div>${sizing(product,selection.size)}
+      <div class="variant-heading size-heading">${esc(product.optionLabel || 'Size')}${AF.source.mode === 'dummy' && product.sizes?.some(size => size !== 'One size') ? ' <button class="text-link" data-open="size-guide" type="button">Size guide</button>' : ''}</div>${sizing(product,selection.size)}
       <p class="stock-message" aria-live="polite">${soldOut ? 'Sold out' : selection.size && stock < 5 ? `Only ${stock} left in this size` : selection.size ? 'In stock' : 'Select a size to check availability'}</p>
       <button type="button" class="button primary add-main" data-add="product" ${soldOut ? 'disabled' : ''}>${soldOut ? 'Sold out' : 'Add to bag'} ${soldOut ? '' : '· ' + money(product.price)}</button>
-      <div class="shipping-note">${icon('truck',20)} Complimentary US shipping on orders $150+</div>
+      ${AF.source.mode === 'dummy' ? `<div class="shipping-note">${icon('truck',20)} Complimentary US shipping on orders $150+</div>` : ''}
       <div class="product-accordions"><details><summary>Details & care</summary><ul>${(product.details || []).map(detail => `<li>${esc(detail)}</li>`).join('')}</ul></details><details><summary>Delivery & returns</summary><p>Standard delivery in 3–5 business days. Returns accepted within 30 days. <a class="text-link" href="#/info/shipping">See delivery details</a></p></details></div></div></div>
-      ${related.length ? `<div class="related"><div class="section-heading"><h2>Wear it <em>with.</em></h2><a class="text-link" href="#/shop">Explore the collection</a></div>${grid(related)}</div>` : ''}</section>`;
+      ${related.length ? `<div class="related"><div class="section-heading"><h2>${AF.source.mode === 'api' ? 'You may also <em>like.</em>' : 'Wear it <em>with.</em>'}</h2><a class="text-link" href="#/shop">Explore the collection</a></div>${grid(related)}</div>` : ''}</section>`;
   }
 
   function galleryPage(route) {
@@ -237,7 +240,9 @@
       AFCheckout.bind(current);
     } else main.innerHTML = missing();
     const heading = main.querySelector('h1');
-    document.title = current.page === 'home' ? 'AFTERFORM — Clothes for wherever you’re headed' : `${heading?.textContent?.replace(/\.$/, '') || 'Shop'} — AFTERFORM`;
+    document.title = AF.source.mode === 'api'
+      ? `${current.page === 'home' ? 'Shop' : heading?.textContent?.replace(/\\.$/, '') || 'Shop'} — ${config.brand}`
+      : current.page === 'home' ? 'AFTERFORM — Clothes for wherever you’re headed' : `${heading?.textContent?.replace(/\\.$/, '') || 'Shop'} — AFTERFORM`;
     if (resetScroll && (previous?.page !== current.page || previous?.parts.join('/') !== current.parts.join('/'))) window.scrollTo(0,0);
     if (focus) main.focus({preventScroll:true});
   }
@@ -247,7 +252,7 @@
     const total = AF.totals(items);
     if (!items.length) return `<div class="bag-empty">${icon('bag',42)}<h3>Your bag is empty.</h3><a class="button primary" href="#/shop">Explore the shop</a></div>`;
     const remaining = Math.max(0,config.shippingFree - total.subtotal);
-    return `<div class="bag-drawer-content"><div class="shipping-progress"><p>${remaining ? `${money(remaining)} away from complimentary US shipping` : 'You’ve unlocked complimentary standard US shipping.'}</p><progress aria-label="Progress toward complimentary shipping" value="${Math.min(config.shippingFree,total.subtotal)}" max="${config.shippingFree}"></progress></div><div class="bag-drawer-items">${items.map(item => `<article class="drawer-item"><a href="${productPath(item.id)}">${img(item.image,item.name)}</a><div><a href="${productPath(item.id)}">${esc(item.name)}</a><span>${esc(item.color)}${item.size ? ' / ' + esc(item.size) : ''}</span><div class="quantity"><button type="button" data-bag-change="-1" data-id="${esc(item.id)}" data-size-value="${esc(item.size)}" data-color-value="${esc(item.color)}" aria-label="Decrease ${esc(item.name)} quantity">${icon('minus',14)}</button><span>${item.qty}</span><button type="button" data-bag-change="1" data-id="${esc(item.id)}" data-size-value="${esc(item.size)}" data-color-value="${esc(item.color)}" aria-label="Increase ${esc(item.name)} quantity" ${item.qty >= item.stock ? 'disabled' : ''}>${icon('plus',14)}</button></div></div><b>${money(item.price * item.qty)}</b></article>`).join('')}</div><div class="bag-drawer-end"><div><b>Subtotal</b><b>${money(total.subtotal)}</b></div><p>Delivery shown at checkout.</p><a class="button primary" href="#/checkout">Checkout</a><a class="button secondary" href="#/bag">View bag</a></div></div>`;
+    return `<div class="bag-drawer-content">${AF.source.mode === 'dummy' ? `<div class="shipping-progress"><p>${remaining ? `${money(remaining)} away from complimentary US shipping` : 'You’ve unlocked complimentary standard US shipping.'}</p><progress aria-label="Progress toward complimentary shipping" value="${Math.min(config.shippingFree,total.subtotal)}" max="${config.shippingFree}"></progress></div>` : ''}<div class="bag-drawer-items">${items.map(item => `<article class="drawer-item"><a href="${productPath(item.id)}">${img(item.image,item.name)}</a><div><a href="${productPath(item.id)}">${esc(item.name)}</a><span>${esc(item.color)}${item.size ? ' / ' + esc(item.size) : ''}</span><div class="quantity"><button type="button" data-bag-change="-1" data-id="${esc(item.id)}" data-size-value="${esc(item.size)}" data-color-value="${esc(item.color)}" aria-label="Decrease ${esc(item.name)} quantity">${icon('minus',14)}</button><span>${item.qty}</span><button type="button" data-bag-change="1" data-id="${esc(item.id)}" data-size-value="${esc(item.size)}" data-color-value="${esc(item.color)}" aria-label="Increase ${esc(item.name)} quantity" ${item.qty >= item.stock ? 'disabled' : ''}>${icon('plus',14)}</button></div></div><b>${money(item.price * item.qty)}</b></article>`).join('')}</div><div class="bag-drawer-end"><div><b>Subtotal</b><b>${money(total.subtotal)}</b></div><p>Delivery shown at checkout.</p><a class="button primary" href="#/checkout">Checkout</a><a class="button secondary" href="#/bag">View bag</a></div></div>`;
   }
 
   let quick = null;
@@ -270,7 +275,9 @@
     } else if (kind === 'filters') {
       title = 'Filters';
       const options = [...new Set(available().flatMap(product=>product.sizes || []))];
-      content = `<form id="filter-form" class="filter-form"><label for="filter-size">Size</label><select id="filter-size" name="size"><option value="">All sizes</option>${options.map(size=>`<option ${current.query.get('size')===size?'selected':''}>${esc(size)}</option>`).join('')}</select><label for="filter-price">Price</label><select id="filter-price" name="price">${[['','All prices'],['50','Under $50'],['100','Under $100'],['over-100','$100 and up']].map(([value, text])=>`<option value="${value}" ${current.query.get('price')===value?'selected':''}>${text}</option>`).join('')}</select><label class="checkbox-label"><input type="checkbox" name="stock" value="1" ${current.query.get('stock')==='1'?'checked':''}> In stock only</label><button class="button primary">Show results</button><a class="text-link" href="${currentLink(current,{size:'',price:'',stock:''})}">Clear filters</a></form>`;
+      const threshold = AF.source.mode === 'api' && config.currency === 'VND' ? 500000 : 50;
+      const upper = threshold * 2;
+      content = `<form id="filter-form" class="filter-form"><label for="filter-size">${esc(config.productOptionLabel || 'Size')}</label><select id="filter-size" name="size"><option value="">All options</option>${options.map(size=>`<option ${current.query.get('size')===size?'selected':''}>${esc(size)}</option>`).join('')}</select><label for="filter-price">Price</label><select id="filter-price" name="price">${[['','All prices'],[String(threshold),'Under ' + money(threshold)],[String(upper),'Under ' + money(upper)],['over-' + upper,money(upper) + ' and up']].map(([value, text])=>`<option value="${value}" ${current.query.get('price')===value?'selected':''}>${text}</option>`).join('')}</select><label class="checkbox-label"><input type="checkbox" name="stock" value="1" ${current.query.get('stock')==='1'?'checked':''}> In stock only</label><button class="button primary">Show results</button><a class="text-link" href="${currentLink(current,{size:'',price:'',stock:''})}">Clear filters</a></form>`;
     } else if (kind === 'quick') {
       const product = available().find(item=>item.id === options.id);
       if (!product) return;
