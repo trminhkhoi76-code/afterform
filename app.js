@@ -1,5 +1,6 @@
-(function () {
+(async function () {
   'use strict';
+  await window.AF.ready;
 
   const {esc, icon, money, config} = AF;
   const main = document.querySelector('#main');
@@ -15,9 +16,14 @@
   const saved = () => AF.read('saved', []);
   const label = title => `<span class="label">${esc(title)}</span>`;
   const empty = (title, description, href = '#/shop', action = 'Explore the shop') => `<div class="empty-state"><h2>${esc(title)}</h2><p>${esc(description)}</p><a class="button primary" href="${href}">${action}</a></div>`;
-  const navLinks = [['New in','#/collection/new'],['Shop','#/shop'],['Accessories','#/category/accessories'],['Lookbook','#/gallery']];
+  const navLinks = AF.source.mode === 'api'
+    ? (config.navigation.length
+      ? config.navigation.map(item => [item.label, item.href])
+      : [['Shop', '#/shop'], ...config.categories.slice(0, 2).map(category => [category, categoryPath(category)]),
+        ...(AF.looks.length ? [['Lookbook', '#/gallery']] : [])])
+    : [['New in','#/collection/new'],['Shop','#/shop'],['Accessories','#/category/accessories'],['Lookbook','#/gallery']];
   const checkoutPages = new Set(['bag','checkout','confirmation','login','register','account','track']);
-  const slides = [
+  const slides = AF.source.mode === 'api' ? config.slides : [
     {tag:'The Motion Edit', first:'Form in', second:'motion.', description:'Relaxed tailoring, tactile layers, and everyday pieces with a point of view.', action:'Shop the edit', href:'#/collection/new', image:config.hero, alt:'A woman in a chocolate leather bomber seated against a warm amber backdrop', credit:'The Drift Bomber', product:'drift-bomber'},
     {tag:'Studio Notes', first:'After', second:'hours.', description:'A slimmer palette with a softer silhouette. See how the pieces come together.', action:'Open the lookbook', href:'#/gallery/after-hours', image:'./assets/look-3.webp', alt:AF.looks[2].alt, credit:'The Crescent Bag', product:'crescent-bag'}
   ];
@@ -50,7 +56,9 @@
   }
 
   function wordmark() {
-    return `<a class="wordmark" href="#/" aria-label="AFTERFORM home">AFTER<span>FORM</span><i aria-hidden="true"></i></a>`;
+    return AF.source.mode === 'api'
+      ? `<a class="wordmark" href="#/" aria-label="${esc(config.brand)} home">${esc(config.brand)}<i aria-hidden="true"></i></a>`
+      : `<a class="wordmark" href="#/" aria-label="AFTERFORM home">AFTER<span>FORM</span><i aria-hidden="true"></i></a>`;
   }
 
   function renderHeader() {
@@ -62,6 +70,10 @@
   }
 
   function renderFooter() {
+    if (AF.source.mode === 'api') {
+      footer.innerHTML = `<div class="shell"><div class="footer-top"><div class="footer-intro"><h2>${esc(config.brand)}</h2><p>${esc(config.description)}</p></div><nav aria-label="Explore"><b>Explore</b><a href="#/shop">Shop all</a>${AF.looks.length ? '<a href="#/gallery">Lookbook</a>' : ''}</nav><nav aria-label="Support"><b>Support</b><a href="admin.html?store=${encodeURIComponent(AF.source.storeId)}">Admin preview</a></nav></div><div class="footer-base">${wordmark()}<span>${esc(config.market)} · ${esc(config.currency)}</span><small>© ${new Date().getFullYear()} ${esc(config.brand)}</small></div></div>`;
+      return;
+    }
     footer.innerHTML = `<div class="shell"><div class="footer-top"><div class="footer-intro">${label('Notes from AFTERFORM')}<h2>Good things<br>come in <em>edits.</em></h2><form id="newsletter" class="newsletter"><label class="sr-only" for="newsletter-email">Email address</label><input id="newsletter-email" type="email" required placeholder="Your email address" autocomplete="email"><button type="submit">Subscribe</button></form><p class="newsletter-status" aria-live="polite"></p></div>
       <nav aria-label="Explore"><b>Explore</b><a href="#/collection/new">New in</a><a href="#/shop">Shop all</a><a href="#/gallery">Lookbook</a><a href="#/saved">Saved items</a></nav>
       <nav aria-label="Support"><b>Support</b><a href="#/track">Track an order</a><a href="#/info/shipping">Delivery & returns</a><a href="#/account">My account</a><a href="admin.html">Admin studio</a></nav></div>
@@ -102,6 +114,12 @@
 
   function home() {
     const items = available().filter(product => product.featured).slice(0,4);
+    if (AF.source.mode === 'api') {
+      return `<section class="shell hero" id="hero" aria-label="Featured collection">${heroContent()}</section>
+        <nav class="shell collection-strip" aria-label="Shop by category"><div class="collection-strip-inner"><span>Shop by category</span>${config.categories.map(category => `<a href="${categoryPath(category)}">${esc(category)}</a>`).join('')}</div></nav>
+        <section class="shell arrivals"><div class="section-heading"><h2>Featured <em>products.</em></h2><a class="text-link" href="#/shop">View all products</a></div>${items.length ? grid(items,{showNew:false,eager:true}) : empty('No featured products yet.', 'Explore the full catalog.')}</section>
+        ${config.journal?.image ? `<section class="shell home-journal"><div class="journal-image">${img(config.journal.image, config.journal.alt || config.brand, 'loading="lazy"')}</div><div class="journal-copy"><h2>${esc(config.journal.title || config.brand)}</h2><p>${esc(config.journal.description || '')}</p><a class="button invert" href="#/shop">Explore products</a></div></section>` : ''}`;
+    }
     return `<section class="shell hero" id="hero" aria-label="Featured collection">${heroContent()}</section>
       <nav class="shell collection-strip" aria-label="Shop by category"><div class="collection-strip-inner"><span>Shop by category</span>${config.categories.map(category => `<a href="${categoryPath(category)}">${esc(category)}</a>`).join('')}</div></nav>
       <section class="shell arrivals"><div class="section-heading"><h2>New in <em>studio.</em></h2><a class="text-link" href="#/collection/new">View all new arrivals</a></div>${items.length ? grid(items,{showNew:false,eager:true}) : empty('The next edit is on its way.', 'Browse the full collection in the meantime.')}</section>
@@ -184,6 +202,7 @@
   }
 
   function galleryPage(route) {
+    if (!AF.looks.length) return `<section class="shell listing">${empty('No lookbook yet.', 'Browse available products instead.')}</section>`;
     const look = AF.looks.find(item=>item.id === route.parts[0]);
     if (route.parts.length && !look) return missing();
     if (look) {
@@ -194,6 +213,9 @@
   }
 
   function infoPage() {
+    if (AF.source.mode === 'api') {
+      return `<article class="shell information">${breadcrumbs(['Delivery & returns'])}<div class="page-heading"><h1>Delivery &amp; returns</h1><p>Shipping and returns policies will be published by ${esc(config.brand)}.</p></div></article>`;
+    }
     return `<article class="shell information">${breadcrumbs(['Delivery & returns'])}<div class="page-heading"><h1>Delivery &amp; returns<em>.</em></h1><p>United States · USD</p></div><div class="info-columns"><section><h2>Delivery</h2><p>Standard delivery takes 3–5 business days and costs $9. Standard delivery is complimentary on orders of $150 or more.</p><p>Express delivery takes 1–2 business days and costs $18. See the delivery charge in checkout before placing your order.</p><a class="text-link" href="#/track">Track an order</a></section><section><h2>Returns</h2><p>Our demo returns policy allows returns within 30 days for eligible unworn items in their original condition.</p><p>Delivery dates and returns are simulated in the AFTERFORM prototype.</p></section></div></article>`;
   }
 
@@ -425,10 +447,22 @@
   });
   window.addEventListener('hashchange', () => { close(false); refresh({focus:true,resetScroll:true}); });
   window.addEventListener('storage', event => {
-    if (event.key?.startsWith('afterform-v1:') && !dialog.open && !main.contains(document.activeElement)) refresh();
+    if (event.key?.startsWith('afterform-v') && !dialog.open && !main.contains(document.activeElement)) refresh();
   });
 
   window.AFUI = {refresh, toast, go, open};
+  if (AF.source.mode === 'api') {
+    document.title = config.brand + ' — Shop';
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.content = config.description || config.brand;
+    const announcement = document.querySelector('.announcement p');
+    if (announcement) announcement.textContent = config.description || config.brand;
+    const market = document.querySelector('.announcement .market');
+    if (market) market.textContent = [config.market, config.currency].filter(Boolean).join(' · ');
+  } else if (AF.source.storeId !== 'afterform') {
+    const announcement = document.querySelector('.announcement p');
+    if (announcement) announcement.textContent = 'Demo fallback — ' + AF.source.storeId + ' is unavailable';
+  }
   renderFooter();
   refresh();
 }());
