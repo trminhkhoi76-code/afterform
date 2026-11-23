@@ -148,8 +148,9 @@
     const shipping = items.length === 0 ? 0 : method === 'express' ? config.shippingExpress : subtotal >= config.shippingFree ? 0 : config.shippingStandard;
     return {subtotal, discount, shipping, total: cents(subtotal - discount + shipping)};
   }
+  const backendCheckoutPending = () => source.mode === 'api' || Boolean(String(window.AF_RUNTIME?.apiBaseUrl || '').trim());
   function placeOrder({contact, address, method, code}) {
-    if (source.mode === 'api') return {ok:false, error:'Checkout is not enabled for API-backed stores until a secure backend order endpoint is available.'};
+    if (backendCheckoutPending()) return {ok:false, error:'Checkout is not enabled for API-backed stores until a secure backend order endpoint is available.'};
     const lines = cart();
     const products = catalog();
     const items = cartItems(lines, products);
@@ -182,7 +183,7 @@
     return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
   }
   async function signIn(email, password) {
-    if (source.mode === 'api') return {ok:false, error:'Accounts are not enabled for API-backed stores yet.'};
+    if (backendCheckoutPending()) return {ok:false, error:'Accounts are not enabled for API-backed stores yet.'};
     const normalized = email.trim().toLowerCase();
     const isDemo = normalized === config.demoEmail && password === config.demoPassword;
     const profile = read('profiles', []).find(item => item.email === normalized);
