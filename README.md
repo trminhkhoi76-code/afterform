@@ -56,19 +56,11 @@ The storefront and admin now wait for one **public backend bootstrap** before re
 - Store routing: `index.html?store=beauty` and `admin.html?store=beauty` (defaults to `afterform`).
 - Runtime settings: `runtime-config.js` is **public**; do not add credentials or private keys.
 
-### Connect the backend later
+### Production backend connection (Catalog)
 
-Update the existing `runtime-config.js`:
+The production storefront at `https://afterform-lovat.vercel.app/` now uses the published Catalog bootstrap endpoint. `runtime-config.js` sets `apiBaseUrl` to the current origin only on this production domain. `vercel.json` rewrites `/api/v1/public/:path*` to `https://afterform-be.vercel.app/api/v1/public/:path*`, keeping the browser on the same origin, so no backend CORS changes or browser credentials are needed. The rewrite exposes **only public Catalog API routes**, not admin, orders or payment endpoints.
 
-```js
-window.AF_RUNTIME = {
-  apiBaseUrl: 'https://your-backend.example.com',
-  defaultStore: 'afterform',
-  timeoutMs: 4000
-};
-```
-
-The frontend requests `https://your-backend.example.com/api/v1/public/stores/beauty/bootstrap` for `?store=beauty`. Configure backend CORS for the frontend origin and use HTTPS in production. Deploying changes to product data requires **no frontend deployment** after the backend has been connected.
+The existing Neon `production` Catalog store `afterform` has the original fashion demo data imported as a published snapshot (version 1): 8 products, 3 looks, 4 categories. Existing checkout/admin mutations remain disabled in API mode. Local and preview site URLs keep the demo fallback. Backend edits to the published snapshot can update the site without frontend code changes.
 
 ### Loading and fallback behavior
 

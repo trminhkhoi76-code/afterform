@@ -1,6 +1,10 @@
-// Static deployment configuration. This file contains PUBLIC settings only; never put secrets here.
+// Public frontend configuration. Never put API secrets or database credentials here.
+// On production, use the same-origin public API proxy defined in vercel.json.
+// Local development stays in demo mode until an API is explicitly configured.
 window.AF_RUNTIME = {
-  apiBaseUrl: '', // TODO(afterform-be): e.g. 'https://api.example.com' (without trailing slash)
+  apiBaseUrl: window.location.hostname === 'afterform-lovat.vercel.app'
+    ? window.location.origin
+    : '',
   defaultStore: 'afterform',
-  timeoutMs: 4000
+  timeoutMs: 8000
 };
